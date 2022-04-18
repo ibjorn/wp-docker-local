@@ -1,0 +1,70 @@
+version: '3.9'
+
+networks:
+  wordpress:
+
+services:
+  site:
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
+    container_name: nginx
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./wordpress:/var/www/html
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - wordpress
+  mysql:
+    image: mysql:latest
+    container_name: mysql
+    restart: always
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - ./mysql:/var/lib/mysql
+    networks:
+      - wordpress
+  php:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    container_name: php
+    volumes:
+      - ./wordpress:/var/www/html
+    networks:
+      - wordpress
+  wp:
+    build:
+      context: .
+      dockerfile: php.dockerfile
+    container_name: wp
+    entrypoint: ['wp', '--allow-root']
+    volumes:
+      - ./wordpress:/var/www/html
+    networks:
+      - wordpress
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+    ports:
+      - '8080:80'
+    links:
+      - mysql:mysql
+    networks:
+      - wordpress
