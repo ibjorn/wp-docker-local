@@ -10,3 +10,4 @@ LEMP stack network containers for WordPress development.
 4. WordPress: Either copy an existing project to, or download WordPress and unzip in `wordpress` or skip and continue for wp-cli option
 5. Only if you skipped previous step: `cd wordpress` then run `docker-compose run --rm wp core download`
 6. Use wp-cli from project root, example: `docker-compose run --rm wp user list`
+7. `docker-compose up -d --build site`
