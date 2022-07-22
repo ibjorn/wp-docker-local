@@ -1,4 +1,4 @@
-FROM php:8.1.4-fpm-alpine3.14
+FROM php:8.1.8-fpm
 
 RUN touch /var/log/error_log
 
@@ -6,7 +6,9 @@ ADD ./config/www.conf /usr/local/etc/php-fpm.d/www.conf
 ADD ./config/php.ini /usr/local/etc/php/conf.d/php.ini
 ADD ./config/phpmyadmin.ini /usr/local/etc/php/conf.d/phpmyadmin.ini
 
-RUN addgroup -g 1000 wp && adduser -G wp -g wp -s /bin/sh -D wp
+# RUN addgroup -g 1000 wp && adduser -D wp
+RUN groupadd --force -g 1000 wp
+RUN useradd -ms /bin/bash --no-user-group -g 1000 -u 1337 wp
 
 RUN mkdir -p /var/www/html
 
