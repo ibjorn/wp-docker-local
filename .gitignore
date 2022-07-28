@@ -1,3 +1,5 @@
+/db_dump
+/.database
 mysql/**
 nginx/certs/**
 wordpress/**

@@ -1,9 +1,5 @@
 version: '3.9'
 
-networks:
-  wordpress:
-
-
 services:
   site:
     build:
@@ -13,62 +9,94 @@ services:
     ports:
       - 80:80
       - 443:443
+      - 8080:8080
     volumes:
       - ./wordpress:/var/www/html
+      - phpmyadmin:/var/www/html/phpmyadmin
+      - ./nginx:/etc/nginx/conf.d
     environment:
-      DOMAIN: '${DOMAIN}'
-    depends_on:
-      - php
-      - mysql
+      - DOMAIN=${DOMAIN}
+    # depends_on:
+    #   - php
+    #   - mysql
     networks:
       - wordpress
   mysql:
-    image: mysql:latest
+    image: mysql:8.0
     container_name: mysql
     restart: always
     ports:
       - 3306:3306
     environment:
-      MYSQL_DATABASE: '${MYSQL_DATABASE}'
-      MYSQL_USER: '${MYSQL_USER}'
-      MYSQL_PASSWORD: '${MYSQL_PASSWORD}'
-      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD}'
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      #- MYSQL_USER=${MYSQL_USER}
+      #- MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     volumes:
-      - ./mysql:/var/lib/mysql
+      - mysql:/var/lib/mysql
+      - ./mysql/mysql/data:/var/lib/mysql:rw
+      - ./.database:/docker-entrypoint-initdb.d
+    command: '--default-authentication-plugin=mysql_native_password'
     networks:
       - wordpress
-  php:
-    build:
-      context: .
-      dockerfile: php.dockerfile
-    container_name: php
-    volumes:
-      - ./wordpress:/var/www/html
-    networks:
-      - wordpress
+  # php:
+  #   build:
+  #     context: .
+  #     dockerfile: php.dockerfile
+  #   container_name: php
+  #   volumes:
+  #     - ./wordpress:/var/www/html
+  #     # - ./config/www.conf:/usr/local/etc/php-fpm.d/www.conf
+  #   networks:
+  #     - wordpress
   wp:
     build:
       context: .
       dockerfile: php.dockerfile
+    depends_on:
+      - mysql
     container_name: wp
     entrypoint: [ 'wp', '--allow-root' ]
+    environment:
+      - WORDPRESS_DB_HOST=mysql:3306
+      - WORDPRESS_DB_USER=${MYSQL_USER}
+      - WORDPRESS_DB_PASSWORD=${MYSQL_PASSWORD}
+      - WORDPRESS_DB_NAME=${MYSQL_DATABASE}
+      - WORDPRESS_TABLE_PREFIX=${MYSQL_DATABASE_PREFIX}
     volumes:
       - ./wordpress:/var/www/html
+      - ./config/php.ini:/usr/local/etc/php/conf.d/php.ini
+      - ./config/www.conf:/usr/local/etc/php-fpm.d/www.conf
     networks:
       - wordpress
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    depends_on:
+      - mysql
+    image: phpmyadmin/phpmyadmin:fpm-alpine
     container_name: phpmyadmin
+    restart: always
+    hostname: phpmyadmin.local
     volumes:
       - ./wordpress:/var/www/html/phpmyadmin
     links:
       - mysql:mysql
-    ports:
-      - 8080:80
+    # ports:
+    #   - 8081:443
     environment:
-      PMA_HOST: mysql
-      # PMA_PORT: 3306
-      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD}'
-      UPLOAD_LIMIT: 300M
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - UPLOAD_LIMIT=1024m
     networks:
       - wordpress
+
+volumes:
+  phpmyadmin: #   driver: local
+
+  mysql:
+    #   driver: local
+
+networks:
+  wordpress:
+    driver: bridge
